@@ -1,0 +1,43 @@
+# 工作流名称：同步官方 LightRAG 镜像到你的 Docker Hub
+name: Sync LightRAG Image to Docker Hub
+
+# 触发条件：仅允许手动触发（安全！不会因 push 自动运行）
+on:
+  workflow_dispatch:  # 在 GitHub Actions 页面点击 "Run workflow" 才会执行
+
+# 定义一个任务（job）
+jobs:
+  sync:
+    # 使用 GitHub 提供的 Ubuntu 最新虚拟机环境
+    runs-on: ubuntu-latest
+
+    # 任务包含多个步骤（steps）
+    steps:
+      # 步骤 1：登录 Docker Hub
+      # 使用官方 docker/login-action 动作，安全地传入用户名和 Token
+      - name: 🔑 Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          # 从仓库 Secrets 中读取用户名（必须命名为 DOCKERHUB_USERNAME）
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          # 从仓库 Secrets 中读取 Access Token（必须命名为 DOCKERHUB_TOKEN）
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 步骤 2：拉取官方镜像并推送到你的 Docker Hub
+      - name: 🔄 Pull from GHCR and Push to Your Docker Hub
+        run: |
+          # 1. 从 GitHub Container Registry (GHCR) 拉取官方 LightRAG 镜像
+          echo "正在拉取官方镜像 ghcr.io/hkuds/lightrag:latest ..."
+          docker pull ghcr.io/hkuds/lightrag:latest
+
+          # 2. 给镜像打上你的 Docker Hub 标签
+          # 格式：${{ secrets.DOCKERHUB_USERNAME }}/lightrag:latest
+          echo "正在打标签为 ${{ secrets.DOCKERHUB_USERNAME }}/lightrag:latest ..."
+          docker tag ghcr.io/hkuds/lightrag:latest ${{ secrets.DOCKERHUB_USERNAME }}/lightrag:latest
+
+          # 3. 推送到你的 Docker Hub 仓库
+          echo "正在推送镜像到 Docker Hub ..."
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/lightrag:latest
+
+          echo "✅ 同步完成！现在你可以用以下命令在国内高速拉取："
+          echo "   docker pull ${{ secrets.DOCKERHUB_USERNAME }}/lightrag:latest"
